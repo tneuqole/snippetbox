@@ -4,7 +4,24 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+
+	"github.com/justinas/nosurf"
 )
+
+// use this first. if a panic occurs, when handler chain bubbles back up
+// the deferred func is executed
+func (app *application) recoverPanic(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if err := recover(); err != nil {
+				w.Header().Set("Connection", "close")
+				app.serverError(w, r, fmt.Errorf("%s", err))
+			}
+		}()
+
+		next.ServeHTTP(w, r)
+	})
+}
 
 func setCommonResponseHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -43,17 +60,24 @@ func (app *application) logRequest(next http.Handler) http.Handler {
 	})
 }
 
-// use this first. if a panic occurs, when handler chain bubbles back up
-// the deferred func is executed
-func (app *application) recoverPanic(next http.Handler) http.Handler {
+func (app *application) requireAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		defer func() {
-			if err := recover(); err != nil {
-				w.Header().Set("Connection", "close")
-				app.serverError(w, r, fmt.Errorf("%s", err))
-			}
-		}()
+		if !app.isAuthenticated(r) {
+			http.Redirect(w, r, "/user/login", http.StatusSeeOther)
+			return
+		}
 
+		w.Header().Add("Cache-Control", "no-store")
 		next.ServeHTTP(w, r)
 	})
+}
+
+func noSurf(next http.Handler) http.Handler {
+	csrfHandler := nosurf.New(next)
+	csrfHandler.SetBaseCookie(http.Cookie{
+		HttpOnly: true,
+		Path:     "/",
+		Secure:   true,
+	})
+	return csrfHandler
 }

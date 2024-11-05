@@ -2,23 +2,24 @@
 
 {{define "main"}}
 <form action="/snippet/create" method="POST">
+    <input type='hidden' name='csrf_token' value='{{.CSRFToken}}'>
     <div>
         <label>Title:</label>
-        {{with .Form.V.Errors.title}}
+        {{with .Form.Errors.title}}
             <label class="error">{{.}}</label>
         {{end}}
         <input type="text" name="title" value="{{.Form.Title}}">
     </div>
     <div>
         <label>Content:</label>
-        {{with .Form.V.Errors.content}}
+        {{with .Form.Errors.content}}
             <label class="error">{{.}}</label>
         {{end}}
         <textarea name="content">{{.Form.Content}}</textarea>
     </div>
     <div>
         <label>Delete in:</label>
-        {{with .Form.V.Errors.expires}}
+        {{with .Form.Errors.expires}}
             <label class="error">{{.}}</label>
         {{end}}
         <input type="radio" name="expires" value="365" {{if (eq .Form.Expires 365)}}checked{{end}}> One Year
