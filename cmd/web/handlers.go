@@ -139,6 +139,19 @@ func (app *application) logoutUser(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
+func (app *application) getAccount(w http.ResponseWriter, r *http.Request) {
+	id := app.sessionManager.Get(r.Context(), "authenticatedUserID").(int)
+	user, err := app.users.Get(id)
+	if err != nil {
+		http.Redirect(w, r, "/user/login", http.StatusSeeOther)
+		return
+	}
+
+	data := app.newTemplateData(r)
+	data.User = user
+	app.render(w, r, http.StatusOK, "account.tmpl", data)
+}
+
 func (app *application) home(w http.ResponseWriter, r *http.Request) {
 	snippets, err := app.snippets.Latest()
 	if err != nil {
