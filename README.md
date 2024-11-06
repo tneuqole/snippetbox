@@ -3,19 +3,11 @@
 This repo contains my code from reading the book [Let's Go](https://lets-go.alexedwards.net/)
 by Alex Edwards.
 
-## Running locally
+## Running the server locally
 
-Create the database user and database
+See internal/models/testdata for database setup.
 
-```sql
-CREATE USER 'web'@'localhost';
-GRANT SELECT, INSERT, UPDATE, DELETE ON snippetbox.* TO 'web'@'localhost';
-ALTER USER 'web'@'localhost' IDENTIFIED BY 'password';
-
---TODO add database schema
-```
-
-Generate a TLS certificate
+Generate a TLS certificate.
 
 ```zsh
 mkdir tls
@@ -23,8 +15,17 @@ cd tls
 go run $GOROOT/src/crypto/tls/generate_cert.go --rsa-bits=2048 --host=localhost
 ```
 
-Start the server from the root directory
+Start the server from the root directory.
 
 ```zsh
 go run ./cmd/web
+```
+
+## Running tests
+
+To run all tests and view coverage:
+
+```zsh
+go test --covermode=count -coverprofile=profile.out ./...
+go tool cover -html=profile.out
 ```
