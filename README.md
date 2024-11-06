@@ -3,6 +3,8 @@
 This repo contains my code from reading the book [Let's Go](https://lets-go.alexedwards.net/)
 by Alex Edwards.
 
+Finished Nov 6 2024. This book was a gold mine, highly recommend.
+
 ## Running the server locally
 
 See internal/models/testdata for database setup.
