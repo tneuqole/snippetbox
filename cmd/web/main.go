@@ -24,6 +24,7 @@ type application struct {
 	templateCache  map[string]*template.Template
 	formDecoder    *form.Decoder
 	sessionManager *scs.SessionManager
+	debug          bool
 }
 
 func openDB(dsn string) (*sql.DB, error) {
@@ -44,9 +45,17 @@ func openDB(dsn string) (*sql.DB, error) {
 func main() {
 	addr := flag.String("addr", ":4000", "HTTP network address")
 	dsn := flag.String("dsn", "web:password@/snippetbox?parseTime=true", "mysql data source name")
+	debug := flag.Bool("debug", false, "enable debug logging")
 	flag.Parse()
 
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{AddSource: false}))
+	logLevel := slog.LevelInfo
+	if *debug {
+		logLevel = slog.LevelDebug
+	}
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		AddSource: false,
+		Level:     logLevel,
+	}))
 	db, err := openDB(*dsn)
 	if err != nil {
 		logger.Error(err.Error())
@@ -71,6 +80,7 @@ func main() {
 		templateCache:  templateCache,
 		formDecoder:    form.NewDecoder(),
 		sessionManager: sessionManager,
+		debug:          *debug,
 	}
 
 	logger.Info("starting server", slog.Any("addr", *addr))
