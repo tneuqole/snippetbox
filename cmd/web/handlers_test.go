@@ -206,7 +206,7 @@ func TestSnippetCreate(t *testing.T) {
 		code, header, _ := ts.postForm(t, "/user/login", form)
 
 		assert.Equal(t, code, http.StatusSeeOther)
-		assert.Equal(t, "/", header.Get("Location"))
+		assert.Equal(t, "/snippet/create", header.Get("Location")) // uses redirectPath from session
 
 		code, _, body = ts.get(t, "/snippet/create")
 		assert.Equal(t, code, http.StatusOK)

@@ -30,6 +30,13 @@ type userLoginForm struct {
 	validator.Validator `form:"-"`
 }
 
+type changePasswordForm struct {
+	CurrentPassword     string `form:"currentPassword"`
+	NewPassword         string `form:"newPassword"`
+	ConfirmNewPassword  string `form:"confirmNewPassword"`
+	validator.Validator `form:"-"`
+}
+
 func ping(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("pong"))
 }
@@ -154,6 +161,59 @@ func (app *application) getAccount(w http.ResponseWriter, r *http.Request) {
 	data := app.newTemplateData(r)
 	data.User = user
 	app.render(w, r, http.StatusOK, "account.tmpl", data)
+}
+
+func (app *application) getChangePasswordForm(w http.ResponseWriter, r *http.Request) {
+	data := app.newTemplateData(r)
+	data.Form = changePasswordForm{}
+	app.render(w, r, http.StatusOK, "password.tmpl", data)
+}
+
+func (app *application) postChangePasswordForm(w http.ResponseWriter, r *http.Request) {
+	var form changePasswordForm
+	err := app.decodePostForm(r, &form)
+	if err != nil {
+		app.clientError(w, http.StatusBadRequest)
+		return
+	}
+
+	form.CheckField(validator.NotBlank(form.CurrentPassword), "currentPassword", "Cannot be blank")
+	form.CheckField(validator.NotBlank(form.NewPassword), "newPassword", "Cannot be blank")
+	form.CheckField(validator.MinChars(form.NewPassword, 8), "newPassword", "Must be at least 8 characters long")
+	form.CheckField(validator.NotBlank(form.ConfirmNewPassword), "confirmNewPassword", "Cannot be blank")
+	form.CheckField(validator.Equals(form.NewPassword, form.ConfirmNewPassword), "confirmNewPassword", "Passwords do not match")
+
+	if !form.Valid() {
+		data := app.newTemplateData(r)
+		data.Form = form
+		app.render(w, r, http.StatusUnprocessableEntity, "password.tmpl", data)
+		return
+	}
+
+	id := app.sessionManager.Get(r.Context(), "authenticatedUserID").(int)
+	user, err := app.users.Get(id)
+	if err != nil {
+		http.Redirect(w, r, "/user/login", http.StatusSeeOther)
+		return
+	}
+
+	_, err = app.users.Authenticate(user.Email, form.CurrentPassword)
+	if err != nil {
+		form.AddError("currentPassword", "Current password is incorrect")
+		data := app.newTemplateData(r)
+		data.Form = form
+		app.render(w, r, http.StatusUnprocessableEntity, "password.tmpl", data)
+		return
+	}
+
+	err = app.users.UpdatePassword(user.ID, form.NewPassword)
+	if err != nil {
+		app.serverError(w, r, err)
+		return
+	}
+
+	app.sessionManager.Put(r.Context(), "flash", "Your password has been updated.")
+	http.Redirect(w, r, "/user/login", http.StatusSeeOther)
 }
 
 func (app *application) home(w http.ResponseWriter, r *http.Request) {
